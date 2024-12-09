@@ -38,3 +38,4 @@ for i = 1:19
         distance(j, i) = sqrt((baza(i, 1) - homo(j, 1))^2 + (baza(i, 2) - homo(j, 2))^2);
     end
 end
+
