@@ -2,7 +2,7 @@ function [latitude, longitude] = Map()
 
     addpath('/home/marina/4_curs/SimulationModel/Func/map');
 
-    osmFile = '1.osm';
+    osmFile = '6.osm';
 
     viewer = siteviewer(Basemap="openstreetmap",Buildings=osmFile);
     dom = xmlread(osmFile);
