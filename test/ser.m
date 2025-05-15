@@ -1,67 +1,80 @@
-clear java;
-javaaddpath('/home/marina/4_Curs/jeromq-0.6.0/target/jeromq-0.6.0.jar')
+%% Параметры системы
+fs = 10000;         % Частота дискретизации (Гц)
+T = 1;              % Длительность (с)
+t = 0:1/fs:T-1/fs;  % Временная шкала
+fc = 50;            % Частота несущей (Гц)
+N_bits = 1000;      % Число бит
+N_symbols = N_bits/2; % Число символов QPSK
+phase_shift = pi/6; % Фазовый сдвиг 30° для второго сигнала
 
-import org.zeromq.ZMQ.*;
-import org.zeromq.*;
+%% 1. Генерация данных и QPSK модуляция
+bit_stream = randi([0 1], 1, N_bits);
+symbol_indices = reshape(bit_stream, 2, [])';
+symbols = bi2de(symbol_indices, 'left-msb')';
 
-port_api = 2111;
-context = ZMQ.context(1);
-socket_api_proxy = context.socket(ZMQ.REP);
-socket_api_proxy.bind(sprintf('tcp://*:%d', port_api));
+% Фазовые точки (Gray coding)
+phase_map = [pi/4, 3*pi/4, 5*pi/4, 7*pi/4]; 
 
-fprintf("Start")
-figure(1);
-global pauseFlag;
-pauseFlag = false;
-uicontrol('Style', 'pushbutton', 'String', 'Pause/Resume', ...
-              'Position', [20, 20, 100, 30], ...
-              'Callback', @(src, event) togglePause());
-while true
-    
-    if ~pauseFlag
-        msg = socket_api_proxy.recv();
-        if ~isempty(msg)
-            fprintf('received message [%d]\n', length(msg));
-            if(length(msg) > 1000)
-                process_data(msg);
-            end
-            socket_api_proxy.send("OK");
-        end
-    else
-        pause(0.1);
-    end
-end
-function togglePause()
-    global pauseFlag;
-    pauseFlag = ~pauseFlag;
-end
-function process_data(data_raw)
-    fs = 23040000;
-    fprintf("size data: %d\n", length(data_raw));
-    data_slice = data_raw;
-    floatArray = typecast(uint8(data_slice), 'single');
-    complexArray = complex(floatArray(1:2:end), floatArray(2:2:end));
-    data_complex = complexArray(1:128*180);
-    fprintf("size complex data: %d\n", length(data_complex));
-    cla;
-    window = 128;    
-    noverlap = 0; 
-    nfft = 128;      
-    if any(isnan(data_complex))
-        data_complex(isnan(data_complex)) = 0;
-    end
-    subplot(2, 2, 1);
-    x_t = 1:length(data_complex);
-    plot(x_t, data_complex);
-    title('Данные в временной области');
-    xlabel('Отсчеты');
-    ylabel('Амплитуда');
-    subplot(2, 2, 2);
-    spectrogram(data_complex, window, noverlap, nfft, fs, 'yaxis');
-    title('Спектрограмма переданных данных');
-    xlabel('Время (сек)');
-    ylabel('Частота (Гц)');
-    colorbar;
-    grid on;
-    drawnow;
-end
+% Основной сигнал
+rho = ones(1, N_symbols);
+theta = phase_map(symbols + 1);
+tx_symbols = rho .* exp(1j*theta);
+
+% Сигнал со сдвигом фазы
+theta_shifted = mod(theta + phase_shift, 2*pi); % Добавляем сдвиг и нормализуем
+tx_symbols_shifted = rho .* exp(1j*theta_shifted);
+
+%% 2. Визуализация созвездий
+figure;
+subplot(1,2,1);
+polarplot(theta, rho, 'o', 'MarkerSize', 8, 'LineWidth', 2);
+hold on;
+polarplot(theta_shifted, rho, 'x', 'MarkerSize', 8, 'LineWidth', 2);
+title('Сравнение созвездий');
+legend('Исходный', ['Сдвиг ' num2str(rad2deg(phase_shift)) '°'], 'Location', 'southoutside');
+rlim([0 1.5]);
+
+% Гистограмма фаз
+subplot(1,2,2);
+polarhistogram(theta, 36, 'FaceColor', 'b', 'FaceAlpha', 0.5);
+hold on;
+polarhistogram(theta_shifted, 36, 'FaceColor', 'r', 'FaceAlpha', 0.5);
+title('Распределение фаз');
+legend('Исходный', 'Со сдвигом');
+
+%% 3. Формирование сигналов во временной области
+upsample_factor = fs/(N_symbols/T);
+rrc_filter = rcosdesign(0.35, 10, upsample_factor, 'sqrt');
+
+% Фильтрация основного сигнала
+tx_baseband = upsample(tx_symbols, upsample_factor);
+tx_filtered = conv(tx_baseband, rrc_filter, 'same');
+
+% Фильтрация сдвинутого сигнала
+tx_baseband_shifted = upsample(tx_symbols_shifted, upsample_factor);
+tx_filtered_shifted = conv(tx_baseband_shifted, rrc_filter, 'same');
+
+%% 4. Визуализация во временной области
+figure;
+subplot(2,1,1);
+plot(t, real(tx_filtered), 'b', t, real(tx_filtered_shifted), 'r--');
+title('Сравнение I-компонент');
+xlabel('Время (с)'); ylabel('Амплитуда');
+legend('Исходный', 'Со сдвигом');
+grid on;
+
+subplot(2,1,2);
+phase_diff = angle(tx_filtered .* conj(tx_filtered_shifted));
+plot(t, unwrap(phase_diff));
+title('Разность фаз между сигналами');
+xlabel('Время (с)'); ylabel('Разность фаз (рад)');
+grid on;
+
+%% 5. Анализ фазового сдвига (дополнительно)
+figure;
+polarplot(angle(tx_filtered(1:100:end)), abs(tx_filtered(1:100:end)), 'b.');
+hold on;
+polarplot(angle(tx_filtered_shifted(1:100:end)), abs(tx_filtered_shifted(1:100:end)), 'r.');
+title('Мгновенные значения в полярных координатах');
+legend('Исходный', 'Со сдвигом');
+rlim([0 max(abs(tx_filtered))]);
