@@ -2,7 +2,8 @@ classdef BaseStation < handle
     properties
         ID
         ConnectedSubscribers % Список подключенных абонентов (объекты Subscriber)
-        Coordinate
+        Coordinate %lla coordinates
+        
     end
     
     methods
@@ -12,15 +13,15 @@ classdef BaseStation < handle
             obj.Coordinate = zeros(1, 2);
         end
         
-        function registerSubscriber(obj, subscriber)
-            % Проверяем, есть ли абонент уже в списке
-            if ~any([obj.ConnectedSubscribers.ID] == subscriber.ID)
-                obj.ConnectedSubscribers(end + 1) = subscriber;
-                fprintf('Абонент с ID %d подключен к базовой станции %d.\n', subscriber.ID, obj.ID);
-            else
-                fprintf('Абонент с ID %d уже подключен!\n', subscriber.ID);
-            end
-        end
+        %function registerSubscriber(obj, subscriber)
+        %    % Проверяем, есть ли абонент уже в списке
+        %    if ~any([obj.ConnectedSubscribers.ID] == subscriber.ID)
+        %        obj.ConnectedSubscribers(end + 1) = subscriber;
+        %        fprintf('Абонент с ID %d подключен к базовой станции %d.\n', subscriber.ID, obj.ID);
+        %    else
+        %        fprintf('Абонент с ID %d уже подключен!\n', subscriber.ID);
+        %    end
+        %end
         
         function removeSubscriber(obj, subscriber)
             idx = find([obj.ConnectedSubscribers.ID] == subscriber.ID);

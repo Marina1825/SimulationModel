@@ -13,8 +13,8 @@ function [distance] = UE_eNB(latitude, longitude)
     distance = zeros(1, 1);
 
     for i = 1:1
-        homo(i, 1) = latitude(1,1) + (latitude(1,2) - latitude(1,1)) * rand();
-        homo(i, 2) = longitude(1,1) + (longitude(1,2) - longitude(1,1)) * rand();
+        homo(i, 1) = 54.9841;%latitude(1,1) + (latitude(1,2) - latitude(1,1)) * rand();
+        homo(i, 2) = 82.8237;%longitude(1,1) + (longitude(1,2) - longitude(1,1)) * rand();
         a = homo(i, 1);
         lon1 = deg2rad(a);
         b = homo(i, 2);
@@ -27,8 +27,8 @@ function [distance] = UE_eNB(latitude, longitude)
     end
 
     for i = 1:1
-        baza(i, 1) = latitude(1,1) + (latitude(1,2) - latitude(1,1)) * rand();
-        baza(i, 2) = longitude(1,1) + (longitude(1,2) - longitude(1,1)) * rand();
+        baza(i, 1) = 54.9837;%latitude(1,1) + (latitude(1,2) - latitude(1,1)) * rand();
+        baza(i, 2) = 82.8225;%longitude(1,1) + (longitude(1,2) - longitude(1,1)) * rand();
         a = baza(i, 1);
         lat1 = deg2rad(a);
         b = baza(i, 2);
